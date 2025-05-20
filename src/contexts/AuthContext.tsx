@@ -113,11 +113,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Check if this is an email login (admin) or identifier login (student/staff)
-      const isEmailLogin = role === 'admin';
+      // Handle email format - if it doesn't include '@', assume it's an ID and add @gmail.com
+      const email = credentials.identifier.includes('@') 
+        ? credentials.identifier 
+        : `${credentials.identifier}@gmail.com`;
       
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: isEmailLogin ? credentials.identifier : `${credentials.identifier}@nmca.edu`, // Use fake email for identifier logins
+        email: email,
         password: credentials.password,
       });
       
@@ -160,10 +162,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Check if this is an email signup (admin) or identifier signup (student/staff)
-      const isEmailSignup = role === 'admin';
-      
-      const email = isEmailSignup ? userData.email : `${userData.identifier}@nmca.edu`; // Use fake email for identifier signups
+      // Make sure email is properly formatted - either use the provided email or format with gmail.com
+      const email = userData.email || `${userData.identifier}@gmail.com`;
       
       const { data, error } = await supabase.auth.signUp({
         email: email,

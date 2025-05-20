@@ -8,7 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
-import AdminLoginPage from "./pages/AdminLoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
@@ -31,7 +30,6 @@ const App = () => (
           <Routes>
             {/* Auth Routes */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin-login" element={<AdminLoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             
             {/* Protected Routes */}
