@@ -13,6 +13,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    storage: localStorage, // Using localStorage for session persistence
+    storage: window.localStorage, // Fix: Using window.localStorage instead of localStorage
   }
 });
