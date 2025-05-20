@@ -21,30 +21,46 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, LoginCredentials, SignupData } from '@/contexts/AuthContext';
 
-// Form validation schema
+// Form validation schema for login
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Required'),
   password: z.string().min(1, 'Password is required'),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+// Form validation schema for signup
+const signupSchema = z.object({
+  name: z.string().min(1, 'Full name is required'),
+  identifier: z.string().min(1, 'Required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  path: ['confirmPassword'],
+  message: 'Passwords do not match',
+});
 
 const LoginPage = () => {
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, signup, isAuthenticated, loading } = useAuth();
   const [role, setRole] = useState<'student' | 'staff'>('student');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<LoginFormData>({
+  const loginForm = useForm<LoginCredentials>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       identifier: '',
       password: '',
+    },
+  });
+
+  const signupForm = useForm<SignupData & { confirmPassword: string }>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      identifier: '',
+      password: '',
+      confirmPassword: '',
+      email: `${Math.random().toString(36).substring(2, 15)}@nmca.edu`, // Dummy email for non-admin users
     },
   });
 
@@ -53,14 +69,26 @@ const LoginPage = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const onSubmit = async (data: LoginFormData) => {
+  const handleLogin = async (data: LoginCredentials) => {
     await login(data, role);
-    reset();
+    loginForm.reset();
+  };
+
+  const handleSignup = async (data: SignupData & { confirmPassword: string }) => {
+    // Remove confirmPassword before sending to API
+    const { confirmPassword, ...userData } = data;
+    await signup(userData, role);
+    signupForm.reset();
   };
 
   const handleRoleChange = (value: string) => {
     setRole(value as 'student' | 'staff');
-    reset();
+    loginForm.reset();
+    signupForm.reset();
+  };
+
+  const handleModeChange = (value: string) => {
+    setMode(value as 'login' | 'signup');
   };
 
   return (
@@ -90,7 +118,7 @@ const LoginPage = () => {
               className="h-16 mx-auto mb-4"
             />
             <h1 className="text-2xl font-bold">NMCA Learning Portal</h1>
-            <p className="text-muted-foreground">Sign in to access your courses</p>
+            <p className="text-muted-foreground">Access your courses</p>
           </div>
           
           <Card>
@@ -102,56 +130,139 @@ const LoginPage = () => {
                 </TabsList>
               </Tabs>
             </CardHeader>
-            
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="identifier">
-                    {role === 'student' ? 'Roll Number' : 'Staff ID'}
-                  </Label>
-                  <Input
-                    id="identifier"
-                    placeholder={role === 'student' ? 'Enter your roll number' : 'Enter your staff ID'}
-                    {...register('identifier')}
-                    className={errors.identifier ? 'border-red-500' : ''}
-                    autoComplete="username"
-                  />
-                  {errors.identifier && (
-                    <p className="text-red-500 text-xs mt-1">{errors.identifier.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link to="/forgot-password" className="text-xs text-nmca-blue hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...register('password')}
-                    className={errors.password ? 'border-red-500' : ''}
-                    autoComplete="current-password"
-                  />
-                  {errors.password && (
-                    <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-                  )}
-                </div>
-              </CardContent>
+
+            <Tabs defaultValue="login" onValueChange={handleModeChange}>
+              <div className="px-6 pt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Login</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+              </div>
               
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-nmca-blue hover:bg-nmca-darkBlue" 
-                  disabled={loading}
-                >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </CardFooter>
-            </form>
+              <TabsContent value="login">
+                <form onSubmit={loginForm.handleSubmit(handleLogin)}>
+                  <CardContent className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="identifier">
+                        {role === 'student' ? 'Roll Number' : 'Staff ID'}
+                      </Label>
+                      <Input
+                        id="identifier"
+                        placeholder={role === 'student' ? 'Enter your roll number' : 'Enter your staff ID'}
+                        {...loginForm.register('identifier')}
+                        className={loginForm.formState.errors.identifier ? 'border-red-500' : ''}
+                        autoComplete="username"
+                      />
+                      {loginForm.formState.errors.identifier && (
+                        <p className="text-red-500 text-xs mt-1">{loginForm.formState.errors.identifier.message}</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Link to="/forgot-password" className="text-xs text-nmca-blue hover:underline">
+                          Forgot password?
+                        </Link>
+                      </div>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        {...loginForm.register('password')}
+                        className={loginForm.formState.errors.password ? 'border-red-500' : ''}
+                        autoComplete="current-password"
+                      />
+                      {loginForm.formState.errors.password && (
+                        <p className="text-red-500 text-xs mt-1">{loginForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-nmca-blue hover:bg-nmca-darkBlue" 
+                      disabled={loading}
+                    >
+                      {loading ? 'Signing in...' : 'Sign In'}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="signup">
+                <form onSubmit={signupForm.handleSubmit(handleSignup)}>
+                  <CardContent className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Full Name</Label>
+                      <Input
+                        id="signup-name"
+                        placeholder="Enter your full name"
+                        {...signupForm.register('name')}
+                        className={signupForm.formState.errors.name ? 'border-red-500' : ''}
+                      />
+                      {signupForm.formState.errors.name && (
+                        <p className="text-red-500 text-xs mt-1">{signupForm.formState.errors.name.message}</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-identifier">
+                        {role === 'student' ? 'Roll Number' : 'Staff ID'}
+                      </Label>
+                      <Input
+                        id="signup-identifier"
+                        placeholder={role === 'student' ? 'Enter your roll number' : 'Enter your staff ID'}
+                        {...signupForm.register('identifier')}
+                        className={signupForm.formState.errors.identifier ? 'border-red-500' : ''}
+                      />
+                      {signupForm.formState.errors.identifier && (
+                        <p className="text-red-500 text-xs mt-1">{signupForm.formState.errors.identifier.message}</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        {...signupForm.register('password')}
+                        className={signupForm.formState.errors.password ? 'border-red-500' : ''}
+                      />
+                      {signupForm.formState.errors.password && (
+                        <p className="text-red-500 text-xs mt-1">{signupForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                      <Input
+                        id="signup-confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        {...signupForm.register('confirmPassword')}
+                        className={signupForm.formState.errors.confirmPassword ? 'border-red-500' : ''}
+                      />
+                      {signupForm.formState.errors.confirmPassword && (
+                        <p className="text-red-500 text-xs mt-1">{signupForm.formState.errors.confirmPassword.message}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-nmca-blue hover:bg-nmca-darkBlue" 
+                      disabled={loading}
+                    >
+                      {loading ? 'Creating Account...' : 'Create Account'}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </TabsContent>
+            </Tabs>
           </Card>
           
           <div className="mt-4 text-center">

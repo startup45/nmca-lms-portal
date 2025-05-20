@@ -1,6 +1,8 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 type User = {
   id: string;
@@ -15,13 +17,22 @@ type AuthContextType = {
   loading: boolean;
   error: string | null;
   login: (credentials: LoginCredentials, role: string) => Promise<void>;
+  signup: (userData: SignupData, role: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   isAuthenticated: boolean;
+  session: Session | null;
 };
 
-type LoginCredentials = {
+export type LoginCredentials = {
   identifier: string; // Roll number/Staff ID/Email
+  password: string;
+};
+
+export type SignupData = {
+  name: string;
+  email: string;
+  identifier: string; // Roll number/Staff ID
   password: string;
 };
 
@@ -31,87 +42,152 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock data for demonstration purposes
-const MOCK_USERS = [
-  { 
-    id: 'student1', 
-    name: 'John Doe', 
-    role: 'student', 
-    identifier: 'S12345', 
-    password: 'password123',
-    profilePicture: 'https://i.pravatar.cc/150?u=student1',
-    email: 'john.doe@example.com'
-  },
-  { 
-    id: 'staff1', 
-    name: 'Dr. Jane Smith', 
-    role: 'staff', 
-    identifier: 'T54321', 
-    password: 'password123',
-    profilePicture: 'https://i.pravatar.cc/150?u=staff1',
-    email: 'jane.smith@example.com'
-  },
-  { 
-    id: 'admin1', 
-    name: 'Admin User', 
-    role: 'admin', 
-    identifier: 'admin@nmca.in', 
-    password: 'adminpass',
-    profilePicture: 'https://i.pravatar.cc/150?u=admin1',
-    email: 'admin@nmca.in'
-  },
-];
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Check if user is already logged in
+  // Check for existing session and setup auth listener
   useEffect(() => {
-    const storedUser = localStorage.getItem('nmcaUser');
-    
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } catch (err) {
-        console.error('Failed to parse stored user', err);
-        localStorage.removeItem('nmcaUser');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          // Fetch profile data
+          setTimeout(() => {
+            fetchUserProfile(currentSession.user.id);
+          }, 0);
+        } else {
+          setUser(null);
+        }
       }
-    }
-    
-    setLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        fetchUserProfile(currentSession.user.id);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (credentials: LoginCredentials, roleType: string) => {
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setUser({
+          id: data.id,
+          name: data.name,
+          email: data.email || undefined,
+          role: data.role as 'student' | 'staff' | 'admin',
+          profilePicture: data.profile_picture || undefined,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error fetching user profile:', err.message);
+    }
+  };
+
+  const login = async (credentials: LoginCredentials, role: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if this is an email login (admin) or identifier login (student/staff)
+      const isEmailLogin = role === 'admin';
       
-      const matchedUser = MOCK_USERS.find(
-        u => u.identifier === credentials.identifier && 
-             u.password === credentials.password && 
-             u.role === roleType
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: isEmailLogin ? credentials.identifier : `${credentials.identifier}@nmca.edu`, // Use fake email for identifier logins
+        password: credentials.password,
+      });
       
-      if (!matchedUser) {
-        throw new Error('Invalid credentials or role');
+      if (error) {
+        throw error;
       }
 
-      // Create user object without password
-      const { password, identifier, ...userWithoutSensitiveInfo } = matchedUser;
+      if (!data.user) {
+        throw new Error('No user returned from login');
+      }
       
-      // Store in localStorage
-      localStorage.setItem('nmcaUser', JSON.stringify(userWithoutSensitiveInfo));
+      // Check if user has the correct role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+        
+      if (profileError) {
+        throw profileError;
+      }
       
-      setUser(userWithoutSensitiveInfo as User);
-      toast.success(`Welcome back, ${userWithoutSensitiveInfo.name}!`);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      if (profile.role !== role) {
+        // Log the user out if they tried to login with the wrong role
+        await supabase.auth.signOut();
+        throw new Error(`Invalid credentials for ${role} login`);
+      }
+      
+      toast.success(`Welcome back!`);
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unknown error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const signup = async (userData: SignupData, role: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Check if this is an email signup (admin) or identifier signup (student/staff)
+      const isEmailSignup = role === 'admin';
+      
+      const email = isEmailSignup ? userData.email : `${userData.identifier}@nmca.edu`; // Use fake email for identifier signups
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: role,
+            identifier: userData.identifier,
+          }
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('No user returned from signup');
+      }
+      
+      toast.success('Account created successfully!');
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unknown error occurred';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -119,10 +195,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('nmcaUser');
-    setUser(null);
-    toast.info('You have been logged out');
+  const logout = async () => {
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser(null);
+      setSession(null);
+      toast.info('You have been logged out');
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unknown error occurred';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const forgotPassword = async (email: string) => {
@@ -130,19 +221,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       
-      // Check if email exists in mock data
-      const userExists = MOCK_USERS.some(u => u.email === email);
-      
-      if (!userExists) {
-        throw new Error('No account found with this email');
+      if (error) {
+        throw error;
       }
       
       toast.success('Password reset instructions have been sent to your email');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unknown error occurred';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -157,9 +246,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loading,
         error,
         login,
+        signup,
         logout,
         forgotPassword,
         isAuthenticated: !!user,
+        session,
       }}
     >
       {children}
