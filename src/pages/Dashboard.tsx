@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
@@ -374,13 +373,20 @@ const StaffDashboard = ({ stats }: StaffDashboardProps) => {
               </li>
             </ul>
             
-            <div className="mt-4">
+            <div className="mt-4 flex flex-col gap-2">
               <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={() => toast.info("Upload functionality coming soon!")}
               >
                 Upload New Content
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/staff/students')}
+              >
+                View Student Details
               </Button>
             </div>
           </CardContent>
@@ -448,6 +454,8 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard = ({ stats }: AdminDashboardProps) => {
+  const navigate = useNavigate();
+  
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -514,13 +522,13 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
               </li>
             </ul>
             
-            <div className="mt-4">
+            <div className="mt-4 space-y-2">
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => toast.info("Activity log functionality coming soon!")}
+                onClick={() => navigate('/admin/activity-logs')}
               >
-                View Full Activity Log
+                View Activity Logs
               </Button>
             </div>
           </CardContent>
@@ -528,71 +536,46 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Pending Approvals</CardTitle>
-            <CardDescription>Items requiring admin action</CardDescription>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>Manage accounts and permissions</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-4">
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                    <Users className="h-6 w-6 text-nmca-blue" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Course Enrollment Requests</p>
-                    <p className="text-sm text-muted-foreground">8 pending requests</p>
-                  </div>
-                </div>
-                <button 
-                  className="text-sm text-nmca-blue hover:underline"
-                  onClick={() => toast.info("Request review functionality coming soon!")}
-                >
-                  Review
-                </button>
-              </li>
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                    <BookOpen className="h-6 w-6 text-nmca-blue" />
-                  </div>
-                  <div>
-                    <p className="font-medium">New Course Proposals</p>
-                    <p className="text-sm text-muted-foreground">3 pending approvals</p>
-                  </div>
-                </div>
-                <button 
-                  className="text-sm text-nmca-blue hover:underline"
-                  onClick={() => toast.info("Proposal review functionality coming soon!")}
-                >
-                  Review
-                </button>
-              </li>
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                    <Users className="h-6 w-6 text-nmca-blue" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Staff Access Requests</p>
-                    <p className="text-sm text-muted-foreground">2 pending requests</p>
-                  </div>
-                </div>
-                <button 
-                  className="text-sm text-nmca-blue hover:underline"
-                  onClick={() => toast.info("Access request review functionality coming soon!")}
-                >
-                  Review
-                </button>
-              </li>
-            </ul>
-            
-            <div className="mt-4">
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Students</p>
+                <p className="text-sm text-muted-foreground">Manage student accounts</p>
+              </div>
               <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => toast.info("Approvals dashboard coming soon!")}
+                variant="outline"
+                onClick={() => navigate('/admin/students')}
               >
-                View All Pending Items
+                Manage
+              </Button>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Staff</p>
+                <p className="text-sm text-muted-foreground">Manage staff accounts</p>
+              </div>
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/admin/staff')}
+              >
+                Manage
+              </Button>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Courses</p>
+                <p className="text-sm text-muted-foreground">Manage course content</p>
+              </div>
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/courses')}
+              >
+                Manage
               </Button>
             </div>
           </CardContent>

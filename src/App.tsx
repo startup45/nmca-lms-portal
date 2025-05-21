@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -19,6 +19,14 @@ import ProfilePage from "./pages/ProfilePage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import NotFound from "./pages/NotFound";
+
+// Staff Pages
+import StudentDetailsPage from "./pages/staff/StudentDetailsPage";
+
+// Admin Pages
+import StudentManagementPage from "./pages/admin/StudentManagementPage";
+import StaffManagementPage from "./pages/admin/StaffManagementPage";
+import ActivityLogsPage from "./pages/admin/ActivityLogsPage";
 
 // Layouts
 import AppLayout from "./layouts/AppLayout";
@@ -50,6 +58,21 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+// Role-based route guard
+const RoleRoute = ({ children, allowedRoles }: { children: ReactNode, allowedRoles: string[] }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!user || !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   const { user } = useAuth();
   
@@ -70,6 +93,30 @@ const AppRoutes = () => {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+        
+        {/* Staff Routes */}
+        <Route path="/staff/students" element={
+          <RoleRoute allowedRoles={['staff', 'admin']}>
+            <StudentDetailsPage />
+          </RoleRoute>
+        } />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/students" element={
+          <RoleRoute allowedRoles={['admin']}>
+            <StudentManagementPage />
+          </RoleRoute>
+        } />
+        <Route path="/admin/staff" element={
+          <RoleRoute allowedRoles={['admin']}>
+            <StaffManagementPage />
+          </RoleRoute>
+        } />
+        <Route path="/admin/activity-logs" element={
+          <RoleRoute allowedRoles={['admin']}>
+            <ActivityLogsPage />
+          </RoleRoute>
+        } />
       </Route>
       
       {/* Catch-all */}
