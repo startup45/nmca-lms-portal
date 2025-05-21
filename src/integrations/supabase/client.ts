@@ -17,8 +17,21 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
+// Define a custom type for course progress that we use until Supabase types are updated
+type UserCourseProgress = {
+  id: string;
+  user_id: string;
+  course_id: number;
+  completed_modules: number[];
+  last_accessed_module: number;
+  progress_percentage: number;
+  created_at: string;
+  updated_at: string;
+};
+
 // Course data helpers
 export const fetchUserCourseProgress = async (userId: string, courseId: number) => {
+  // Use a custom type assertion since our table might not be reflected in the types yet
   const { data, error } = await supabase
     .from('user_course_progress')
     .select('*')
@@ -31,7 +44,7 @@ export const fetchUserCourseProgress = async (userId: string, courseId: number) 
     return null;
   }
   
-  return data;
+  return data as UserCourseProgress | null;
 };
 
 export const updateModuleCompletion = async (

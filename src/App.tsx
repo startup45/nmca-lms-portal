@@ -10,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
+import StudentSignupPage from "./pages/StudentSignupPage";
+import StaffSignupPage from "./pages/StaffSignupPage";
+import AdminSignupPage from "./pages/AdminSignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
@@ -76,8 +80,12 @@ const AppRoutes = () => {
   
   return (
     <Routes>
-      {/* Auth Routes */}
+      {/* Public Routes */}
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/role-selection" element={!user ? <RoleSelectionPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-student" element={!user ? <StudentSignupPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-staff" element={!user ? <StaffSignupPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-admin-7x9p3q8r2t" element={!user ? <AdminSignupPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       
       {/* Protected Routes */}
