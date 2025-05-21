@@ -13,6 +13,77 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    storage: window.localStorage, // Fix: Using window.localStorage instead of localStorage
+    storage: window.localStorage,
   }
 });
+
+// Course data helpers
+export const fetchUserCourseProgress = async (userId: string, courseId: number) => {
+  const { data, error } = await supabase
+    .from('user_course_progress')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('course_id', courseId)
+    .single();
+  
+  if (error && error.code !== 'PGSQL_ERROR_NO_DATA_FOUND') {
+    console.error('Error fetching user course progress:', error);
+    return null;
+  }
+  
+  return data;
+};
+
+export const updateModuleCompletion = async (
+  userId: string, 
+  courseId: number, 
+  moduleId: number, 
+  completed: boolean
+) => {
+  // First, get existing progress
+  const progress = await fetchUserCourseProgress(userId, courseId);
+  
+  if (!progress) {
+    // Create new progress entry if it doesn't exist
+    const { error } = await supabase
+      .from('user_course_progress')
+      .insert({
+        user_id: userId,
+        course_id: courseId,
+        completed_modules: completed ? [moduleId] : [],
+        last_accessed_module: moduleId,
+        progress_percentage: completed ? 12.5 : 0 // 1/8 modules = 12.5%
+      });
+      
+    if (error) {
+      console.error('Error creating user course progress:', error);
+      return false;
+    }
+  } else {
+    // Update existing progress
+    let completedModules = progress.completed_modules || [];
+    
+    if (completed && !completedModules.includes(moduleId)) {
+      completedModules.push(moduleId);
+    } else if (!completed) {
+      completedModules = completedModules.filter(id => id !== moduleId);
+    }
+    
+    const { error } = await supabase
+      .from('user_course_progress')
+      .update({
+        completed_modules: completedModules,
+        last_accessed_module: moduleId,
+        progress_percentage: (completedModules.length / 8) * 100 // Assuming 8 modules
+      })
+      .eq('user_id', userId)
+      .eq('course_id', courseId);
+      
+    if (error) {
+      console.error('Error updating user course progress:', error);
+      return false;
+    }
+  }
+  
+  return true;
+};

@@ -1,17 +1,14 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, Users, Video, FileText } from 'lucide-react';
+import { BookOpen, Users, Video, FileText, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { supabase, fetchUserCourseProgress } from '@/integrations/supabase/client';
 
 // Mock data for dashboard statistics
-const studentStats = {
-  enrolledCourses: 4,
-  completedLessons: 24,
-  totalLessons: 52,
-  downloadedResources: 15,
-};
-
 const staffStats = {
   courses: 3,
   students: 87,
@@ -28,12 +25,56 @@ const adminStats = {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [studentStats, setStudentStats] = useState({
+    enrolledCourses: 3,
+    completedLessons: 0,
+    totalLessons: 30,
+    downloadedResources: 15,
+  });
+  
+  // Load student stats
+  useEffect(() => {
+    const loadStudentStats = async () => {
+      if (!user?.id || user.role !== 'student') {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // For now, we'll just calculate based on the mock courses
+        // In a real app, you'd fetch this from Supabase
+        const courseIds = [1, 2, 3]; // Mock course IDs
+        let totalCompleted = 0;
+        
+        // For each course, get progress
+        await Promise.all(courseIds.map(async (courseId) => {
+          const progress = await fetchUserCourseProgress(user.id, courseId);
+          if (progress?.completed_modules) {
+            totalCompleted += progress.completed_modules.length;
+          }
+        }));
+        
+        setStudentStats({
+          ...studentStats,
+          completedLessons: totalCompleted,
+        });
+      } catch (error) {
+        console.error('Error loading student stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadStudentStats();
+  }, [user]);
 
   // Render different dashboard based on user role
   const renderDashboard = () => {
     switch(user?.role) {
       case 'student':
-        return <StudentDashboard stats={studentStats} />;
+        return <StudentDashboard stats={studentStats} isLoading={isLoading} />;
       case 'staff':
         return <StaffDashboard stats={staffStats} />;
       case 'admin':
@@ -45,10 +86,33 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {user?.name || 'User'}!</p>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          className="hidden md:flex" 
+          onClick={() => navigate('/courses')}
+        >
+          <BookOpen className="mr-2 h-4 w-4" />
+          Browse Courses
+        </Button>
+      </div>
       
       {renderDashboard()}
+      
+      <div className="block md:hidden mt-4">
+        <Button 
+          className="w-full" 
+          onClick={() => navigate('/courses')}
+        >
+          <BookOpen className="mr-2 h-4 w-4" />
+          Browse Courses
+        </Button>
+      </div>
     </div>
   );
 };
@@ -59,17 +123,24 @@ interface StatCardProps {
   description?: string;
   icon: React.ElementType;
   className?: string;
+  isLoading?: boolean;
 }
 
-const StatCard = ({ title, value, description, icon: Icon, className }: StatCardProps) => (
+const StatCard = ({ title, value, description, icon: Icon, className, isLoading = false }: StatCardProps) => (
   <Card className={className}>
     <CardHeader className="flex flex-row items-center justify-between pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
       <Icon className="h-5 w-5 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      {isLoading ? (
+        <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+      ) : (
+        <>
+          <div className="text-2xl font-bold">{value}</div>
+          {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        </>
+      )}
     </CardContent>
   </Card>
 );
@@ -81,10 +152,12 @@ interface StudentDashboardProps {
     totalLessons: number;
     downloadedResources: number;
   };
+  isLoading: boolean;
 }
 
-const StudentDashboard = ({ stats }: StudentDashboardProps) => {
+const StudentDashboard = ({ stats, isLoading }: StudentDashboardProps) => {
   const completionPercentage = Math.round((stats.completedLessons / stats.totalLessons) * 100);
+  const navigate = useNavigate();
   
   return (
     <div className="space-y-6">
@@ -94,26 +167,30 @@ const StudentDashboard = ({ stats }: StudentDashboardProps) => {
           value={stats.enrolledCourses} 
           icon={BookOpen}
           className="border-l-4 border-nmca-blue"
+          isLoading={isLoading}
         />
         <StatCard 
           title="Completion Rate" 
-          value={`${completionPercentage}%`} 
+          value={`${isLoading ? '-' : completionPercentage}%`} 
           description={`${stats.completedLessons} of ${stats.totalLessons} lessons completed`}
           icon={Video}
           className="border-l-4 border-green-500"
+          isLoading={isLoading}
         />
         <StatCard 
           title="Resources Accessed" 
           value={stats.downloadedResources} 
           icon={FileText}
           className="border-l-4 border-amber-500"
+          isLoading={isLoading}
         />
         <StatCard 
-          title="Latest Activity" 
-          value="2 days ago" 
-          description="Viewed Introduction to Auditing"
-          icon={Users}
+          title="Learning Streak" 
+          value="5 days" 
+          description="Keep going! You're doing great!"
+          icon={TrendingUp}
           className="border-l-4 border-purple-500"
+          isLoading={isLoading}
         />
       </div>
       
@@ -124,26 +201,50 @@ const StudentDashboard = ({ stats }: StudentDashboardProps) => {
             <CardDescription>Continue where you left off</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-4">
-              <li className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                  <Video className="h-6 w-6 text-nmca-blue" />
-                </div>
-                <div>
-                  <p className="font-medium">Introduction to Financial Statements</p>
-                  <p className="text-sm text-muted-foreground">Watched 70% - Continue</p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                  <Video className="h-6 w-6 text-nmca-blue" />
-                </div>
-                <div>
-                  <p className="font-medium">Balance Sheet Analysis</p>
-                  <p className="text-sm text-muted-foreground">Watched 30% - Continue</p>
-                </div>
-              </li>
-            </ul>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded bg-gray-200 animate-pulse"></div>
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                      <div className="h-3 bg-gray-200 animate-pulse rounded w-2/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ul className="space-y-4">
+                <li className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
+                    <Video className="h-6 w-6 text-nmca-blue" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Introduction to Financial Auditing</p>
+                    <p className="text-sm text-muted-foreground">Watched 70% - Continue</p>
+                  </div>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
+                    <Video className="h-6 w-6 text-nmca-blue" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Auditing Standards and Frameworks</p>
+                    <p className="text-sm text-muted-foreground">Watched 30% - Continue</p>
+                  </div>
+                </li>
+              </ul>
+            )}
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => navigate('/courses/1')}
+              >
+                Continue Learning
+              </Button>
+            </div>
           </CardContent>
         </Card>
         
@@ -153,26 +254,50 @@ const StudentDashboard = ({ stats }: StudentDashboardProps) => {
             <CardDescription>Active enrollments</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-4">
-              <li className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                  <BookOpen className="h-6 w-6 text-nmca-blue" />
-                </div>
-                <div>
-                  <p className="font-medium">Financial Auditing 101</p>
-                  <p className="text-sm text-muted-foreground">Dr. Jane Smith • 8 modules</p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
-                  <BookOpen className="h-6 w-6 text-nmca-blue" />
-                </div>
-                <div>
-                  <p className="font-medium">Corporate Accounting</p>
-                  <p className="text-sm text-muted-foreground">Prof. Robert Johnson • 12 modules</p>
-                </div>
-              </li>
-            </ul>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded bg-gray-200 animate-pulse"></div>
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
+                      <div className="h-3 bg-gray-200 animate-pulse rounded w-2/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ul className="space-y-4">
+                <li className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
+                    <BookOpen className="h-6 w-6 text-nmca-blue" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Financial Auditing 101</p>
+                    <p className="text-sm text-muted-foreground">Dr. Jane Smith • 8 modules</p>
+                  </div>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded bg-nmca-gray flex items-center justify-center">
+                    <BookOpen className="h-6 w-6 text-nmca-blue" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Corporate Accounting</p>
+                    <p className="text-sm text-muted-foreground">Prof. Robert Johnson • 12 modules</p>
+                  </div>
+                </li>
+              </ul>
+            )}
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => navigate('/courses')}
+              >
+                View All Courses
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -190,6 +315,8 @@ interface StaffDashboardProps {
 }
 
 const StaffDashboard = ({ stats }: StaffDashboardProps) => {
+  const navigate = useNavigate();
+  
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -246,6 +373,16 @@ const StaffDashboard = ({ stats }: StaffDashboardProps) => {
                 </div>
               </li>
             </ul>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => toast.info("Upload functionality coming soon!")}
+              >
+                Upload New Content
+              </Button>
+            </div>
           </CardContent>
         </Card>
         
@@ -283,6 +420,16 @@ const StaffDashboard = ({ stats }: StaffDashboardProps) => {
                   <div className="h-full bg-nmca-blue" style={{ width: '87%' }}></div>
                 </div>
               </div>
+            </div>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/courses')}
+              >
+                View All Courses
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -366,6 +513,16 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
                 </div>
               </li>
             </ul>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => toast.info("Activity log functionality coming soon!")}
+              >
+                View Full Activity Log
+              </Button>
+            </div>
           </CardContent>
         </Card>
         
@@ -386,7 +543,10 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
                     <p className="text-sm text-muted-foreground">8 pending requests</p>
                   </div>
                 </div>
-                <button className="text-sm text-nmca-blue hover:underline">
+                <button 
+                  className="text-sm text-nmca-blue hover:underline"
+                  onClick={() => toast.info("Request review functionality coming soon!")}
+                >
                   Review
                 </button>
               </li>
@@ -400,7 +560,10 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
                     <p className="text-sm text-muted-foreground">3 pending approvals</p>
                   </div>
                 </div>
-                <button className="text-sm text-nmca-blue hover:underline">
+                <button 
+                  className="text-sm text-nmca-blue hover:underline"
+                  onClick={() => toast.info("Proposal review functionality coming soon!")}
+                >
                   Review
                 </button>
               </li>
@@ -414,11 +577,24 @@ const AdminDashboard = ({ stats }: AdminDashboardProps) => {
                     <p className="text-sm text-muted-foreground">2 pending requests</p>
                   </div>
                 </div>
-                <button className="text-sm text-nmca-blue hover:underline">
+                <button 
+                  className="text-sm text-nmca-blue hover:underline"
+                  onClick={() => toast.info("Access request review functionality coming soon!")}
+                >
                   Review
                 </button>
               </li>
             </ul>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => toast.info("Approvals dashboard coming soon!")}
+              >
+                View All Pending Items
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

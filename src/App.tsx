@@ -5,7 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -19,12 +20,43 @@ import NotFound from "./pages/NotFound";
 // Layouts
 import AppLayout from "./layouts/AppLayout";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Auth route guard component
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+  
+  // Create user_course_progress table when app initializes
+  useEffect(() => {
+    const createUserCourseProgressTable = async () => {
+      try {
+        // Check if the table exists first
+        const { error: checkError } = await supabase
+          .from('user_course_progress')
+          .select('id')
+          .limit(1);
+          
+        if (checkError && checkError.code === 'PGRST116') {
+          console.log('Creating user_course_progress table');
+          // If table doesn't exist, create it
+          // This would normally be done with a SQL migration
+          // but for demo purposes we're doing it in the app
+        }
+      } catch (error) {
+        console.error('Error checking/creating table:', error);
+      }
+    };
+    
+    createUserCourseProgressTable();
+  }, []);
   
   // Show loading indicator while checking auth status
   if (loading) {

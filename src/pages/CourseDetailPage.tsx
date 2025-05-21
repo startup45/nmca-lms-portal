@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { 
   CheckCircle2, 
   Circle, 
@@ -21,13 +22,16 @@ import {
   ExternalLink,
   Maximize,
   Minimize,
-  Users
+  Users,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
+import { supabase, updateModuleCompletion, fetchUserCourseProgress } from '@/integrations/supabase/client';
 
-// Mock course data
+// Mock course data - In a real app, this would come from the database
 const courseData = {
   id: 1,
   title: 'Financial Auditing 101',
@@ -35,15 +39,15 @@ const courseData = {
   instructor: 'Dr. Jane Smith',
   thumbnail: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8ZmluYW5jaWFsJTIwYXVkaXRpbmd8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60',
   totalModules: 8,
-  completedModules: 6,
-  progress: 75,
+  completedModules: 0,
+  progress: 0,
   enrolledStudents: 42,
   modules: [
     {
       id: 1,
       title: 'Introduction to Financial Auditing',
       description: 'Overview of the course and introduction to basic concepts.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '45:20',
       videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
@@ -56,10 +60,10 @@ const courseData = {
       id: 2,
       title: 'Auditing Standards and Frameworks',
       description: 'Learn about international and local auditing standards.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '53:15',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/jNQXAC9IVRw', // Different video
       resources: [
         { id: 3, title: 'Auditing Standards PDF', type: 'pdf', url: '#' },
         { id: 4, title: 'Case Study: XYZ Corp', type: 'pdf', url: '#' },
@@ -69,10 +73,10 @@ const courseData = {
       id: 3,
       title: 'Risk Assessment in Auditing',
       description: 'Identifying and evaluating audit risks.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '48:30',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/LXb3EKWsInQ', // Different video
       resources: [
         { id: 5, title: 'Risk Assessment Worksheet', type: 'excel', url: '#' },
       ]
@@ -81,10 +85,10 @@ const courseData = {
       id: 4,
       title: 'Internal Controls Evaluation',
       description: 'Techniques for evaluating internal controls.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '51:45',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/9bZkp7q19f0', // Different video
       resources: [
         { id: 6, title: 'Internal Controls Checklist', type: 'pdf', url: '#' },
         { id: 7, title: 'Control Environment Analysis', type: 'pdf', url: '#' },
@@ -94,10 +98,10 @@ const courseData = {
       id: 5,
       title: 'Substantive Procedures',
       description: 'Designing and performing substantive audit procedures.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '59:10',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/mQvteoFiMlg', // Different video
       resources: [
         { id: 8, title: 'Audit Procedures Guide', type: 'pdf', url: '#' },
       ]
@@ -106,10 +110,10 @@ const courseData = {
       id: 6,
       title: 'Audit Documentation',
       description: 'Best practices for preparing audit documentation.',
-      completed: true,
+      completed: false,
       contentType: 'video',
       duration: '42:55',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/Kzcz-EVKBEQ', // Different video
       resources: [
         { id: 9, title: 'Documentation Templates', type: 'zip', url: '#' },
       ]
@@ -121,7 +125,7 @@ const courseData = {
       completed: false,
       contentType: 'video',
       duration: '47:20',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/uhAGJSAuNjI', // Different video
       resources: [
         { id: 10, title: 'Opinion Examples', type: 'pdf', url: '#' },
       ]
@@ -133,7 +137,7 @@ const courseData = {
       completed: false,
       contentType: 'video',
       duration: '56:40',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder URL
+      videoUrl: 'https://www.youtube.com/embed/GXrDYboUnnw', // Different video
       resources: [
         { id: 11, title: 'Specialized Audit Guide', type: 'pdf', url: '#' },
       ]
@@ -144,21 +148,157 @@ const courseData = {
 const CourseDetailPage = () => {
   const { user } = useAuth();
   const { courseId } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('content');
-  const [selectedModule, setSelectedModule] = useState(courseData.modules[0]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const [courseProgress, setCourseProgress] = useState<number>(0);
+  const [completedModules, setCompletedModules] = useState<number[]>([]);
+  const [course, setCourse] = useState(courseData);
+  const [selectedModule, setSelectedModule] = useState(course.modules[0]);
+  const [isVideoAccessible, setIsVideoAccessible] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [videoProgress, setVideoProgress] = useState(0);
+
+  // Load user's course progress
+  useEffect(() => {
+    if (user?.id) {
+      const loadProgress = async () => {
+        setIsLoading(true);
+        
+        try {
+          const progress = await fetchUserCourseProgress(user.id, Number(courseId));
+          
+          if (progress) {
+            const completedIds = progress.completed_modules || [];
+            setCompletedModules(completedIds);
+            setCourseProgress(progress.progress_percentage || 0);
+            
+            // Update course data with loaded progress
+            const updatedCourse = {
+              ...course,
+              completedModules: completedIds.length,
+              progress: progress.progress_percentage || 0,
+              modules: course.modules.map(module => ({
+                ...module,
+                completed: completedIds.includes(module.id)
+              }))
+            };
+            
+            setCourse(updatedCourse);
+            
+            // If they have a last accessed module, select it
+            if (progress.last_accessed_module) {
+              const lastModule = updatedCourse.modules.find(m => m.id === progress.last_accessed_module);
+              if (lastModule) {
+                setSelectedModule(lastModule);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading progress:", error);
+          toast.error("Failed to load your progress");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadProgress();
+    }
+  }, [user?.id, courseId]);
+
+  // Check if the selected module is accessible based on course progress
+  useEffect(() => {
+    // Always allow first module
+    if (selectedModule.id === 1) {
+      setIsVideoAccessible(true);
+      return;
+    }
+    
+    // Staff and admin can access all videos
+    if (user?.role === 'staff' || user?.role === 'admin') {
+      setIsVideoAccessible(true);
+      return;
+    }
+    
+    // For students: Check if the previous module is completed
+    if (user?.role === 'student') {
+      const previousModuleId = selectedModule.id - 1;
+      const isPreviousModuleCompleted = completedModules.includes(previousModuleId);
+      
+      setIsVideoAccessible(isPreviousModuleCompleted);
+      
+      if (!isPreviousModuleCompleted && selectedModule.id > 1) {
+        toast.warning(`Complete the previous module first to unlock this content.`);
+      }
+    }
+  }, [selectedModule.id, completedModules, user?.role]);
   
   // Function to toggle module completion status
-  const toggleModuleCompletion = (moduleId: number) => {
-    // In a real app, this would update the backend
-    toast.success(`Module marked as ${selectedModule.completed ? 'incomplete' : 'complete'}`);
+  const toggleModuleCompletion = async (moduleId: number) => {
+    if (!user?.id) {
+      toast.error("Please sign in to track your progress");
+      return;
+    }
     
-    // Update local state for demo purposes
-    setSelectedModule({
-      ...selectedModule,
-      completed: !selectedModule.completed
+    const newCompletionState = !selectedModule.completed;
+    
+    // Optimistic UI update
+    const updatedModules = course.modules.map(module => 
+      module.id === moduleId 
+        ? { ...module, completed: newCompletionState } 
+        : module
+    );
+    
+    const updatedCompletedModules = newCompletionState
+      ? [...completedModules, moduleId]
+      : completedModules.filter(id => id !== moduleId);
+      
+    const newProgressPercentage = (updatedCompletedModules.length / course.totalModules) * 100;
+    
+    setCourse({
+      ...course,
+      modules: updatedModules,
+      completedModules: updatedCompletedModules.length,
+      progress: newProgressPercentage
     });
+    
+    setCompletedModules(updatedCompletedModules);
+    setCourseProgress(newProgressPercentage);
+    
+    // Update in database
+    const success = await updateModuleCompletion(
+      user.id,
+      Number(courseId),
+      moduleId,
+      newCompletionState
+    );
+    
+    if (success) {
+      toast.success(`Module marked as ${newCompletionState ? 'complete' : 'incomplete'}`);
+      
+      // If they completed this module, check if the next one exists and remind them it's now unlocked
+      if (newCompletionState) {
+        const nextModuleId = moduleId + 1;
+        const nextModule = course.modules.find(m => m.id === nextModuleId);
+        
+        if (nextModule) {
+          toast.success(`Next module "${nextModule.title}" is now unlocked!`);
+        }
+      }
+    } else {
+      toast.error("Failed to update progress");
+      
+      // Revert UI changes on error
+      setCourse({
+        ...course,
+        modules: course.modules,
+        completedModules: completedModules.length,
+        progress: (completedModules.length / course.totalModules) * 100
+      });
+      setCompletedModules(completedModules);
+      setCourseProgress((completedModules.length / course.totalModules) * 100);
+    }
   };
   
   // Function to toggle fullscreen mode
@@ -188,6 +328,35 @@ const CourseDetailPage = () => {
     };
   }, []);
 
+  // Simulate video progress for demo purposes
+  useEffect(() => {
+    if (!isVideoAccessible) return;
+    
+    const timer = setInterval(() => {
+      setVideoProgress(prev => {
+        const newValue = prev + 1;
+        if (newValue >= 100) {
+          clearInterval(timer);
+          
+          // Auto-mark complete when video finishes
+          if (user?.role === 'student' && !selectedModule.completed) {
+            toggleModuleCompletion(selectedModule.id);
+          }
+          
+          return 100;
+        }
+        return newValue;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [selectedModule.id, isVideoAccessible]);
+  
+  // Reset video progress when changing modules
+  useEffect(() => {
+    setVideoProgress(0);
+  }, [selectedModule.id]);
+
   return (
     <div className={cn(
       "flex flex-col",
@@ -198,17 +367,17 @@ const CourseDetailPage = () => {
         isFullscreen && "hidden"
       )}>
         <div>
-          <h1 className="text-3xl font-bold">{courseData.title}</h1>
-          <p className="text-muted-foreground">Instructor: {courseData.instructor}</p>
+          <h1 className="text-3xl font-bold">{course.title}</h1>
+          <p className="text-muted-foreground">Instructor: {course.instructor}</p>
         </div>
         
         {user?.role === 'student' && (
           <div className="flex items-center gap-2">
             <div>
               <div className="text-sm font-medium mb-1">
-                Course Progress: {courseData.progress}%
+                Course Progress: {Math.round(courseProgress)}%
               </div>
-              <Progress value={courseData.progress} className="h-2 w-[200px]" />
+              <Progress value={courseProgress} className="h-2 w-[200px]" />
             </div>
           </div>
         )}
@@ -216,7 +385,7 @@ const CourseDetailPage = () => {
         {(user?.role === 'staff' || user?.role === 'admin') && (
           <Button>
             <Users className="mr-2 h-4 w-4" />
-            {courseData.enrolledStudents} Enrolled
+            {course.enrolledStudents} Enrolled
           </Button>
         )}
       </div>
@@ -231,37 +400,49 @@ const CourseDetailPage = () => {
             <CardHeader>
               <CardTitle>Course Modules</CardTitle>
               <CardDescription>
-                {courseData.completedModules} of {courseData.totalModules} modules completed
+                {course.completedModules} of {course.totalModules} modules completed
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <ul className="divide-y">
-                {courseData.modules.map((module) => (
-                  <li key={module.id}>
-                    <button
-                      onClick={() => setSelectedModule(module)}
-                      className={cn(
-                        "flex items-start w-full p-4 text-left transition-colors hover:bg-muted",
-                        selectedModule.id === module.id && "bg-muted"
-                      )}
-                    >
-                      <div className="mr-3 mt-0.5">
-                        {module.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground" />
+                {course.modules.map((module) => {
+                  const previousModuleCompleted = module.id === 1 || completedModules.includes(module.id - 1);
+                  const isLocked = user?.role === 'student' && !previousModuleCompleted && module.id !== 1;
+                  
+                  return (
+                    <li key={module.id}>
+                      <button
+                        onClick={() => setSelectedModule(module)}
+                        disabled={isLocked}
+                        className={cn(
+                          "flex items-start w-full p-4 text-left transition-colors hover:bg-muted",
+                          selectedModule.id === module.id && "bg-muted",
+                          isLocked && "opacity-60 cursor-not-allowed"
                         )}
-                      </div>
-                      <div>
-                        <p className="font-medium">{module.title}</p>
-                        <div className="flex items-center text-xs text-muted-foreground mt-1">
-                          <Play className="h-3 w-3 mr-1" />
-                          <span>{module.duration}</span>
+                      >
+                        <div className="mr-3 mt-0.5">
+                          {module.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : isLocked ? (
+                            <Lock className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground" />
+                          )}
                         </div>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+                        <div>
+                          <p className="font-medium">{module.title}</p>
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <Play className="h-3 w-3 mr-1" />
+                            <span>{module.duration}</span>
+                          </div>
+                        </div>
+                        {isLocked && user?.role === 'student' && (
+                          <Badge variant="outline" className="ml-auto">Locked</Badge>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>
@@ -281,12 +462,46 @@ const CourseDetailPage = () => {
             )}
           >
             <div className="relative h-full">
-              <iframe
-                src={selectedModule.videoUrl}
-                title={selectedModule.title}
-                className="w-full h-full"
-                allowFullScreen
-              ></iframe>
+              {isVideoAccessible ? (
+                <>
+                  <iframe
+                    src={selectedModule.videoUrl}
+                    title={selectedModule.title}
+                    className="w-full h-full"
+                    allowFullScreen
+                  ></iframe>
+                  
+                  {!isFullscreen && (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center justify-between text-white text-xs">
+                          <span>Video Progress</span>
+                          <span>{videoProgress}%</span>
+                        </div>
+                        <Progress value={videoProgress} className="h-1" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-white">
+                  <Lock className="h-16 w-16 mb-4" />
+                  <h3 className="text-xl font-bold">Content Locked</h3>
+                  <p className="text-center max-w-md mt-2">
+                    Complete the previous module first to unlock this content.
+                  </p>
+                  <Button 
+                    className="mt-4"
+                    variant="outline"
+                    onClick={() => {
+                      const previousModule = course.modules.find(m => m.id === selectedModule.id - 1);
+                      if (previousModule) setSelectedModule(previousModule);
+                    }}
+                  >
+                    Go to Previous Module
+                  </Button>
+                </div>
+              )}
               
               <div className="absolute top-2 right-2 p-2">
                 <button
@@ -319,6 +534,7 @@ const CourseDetailPage = () => {
                   onClick={() => toggleModuleCompletion(selectedModule.id)}
                   variant={selectedModule.completed ? "outline" : "default"}
                   className={selectedModule.completed ? "" : "bg-green-600 hover:bg-green-700"}
+                  disabled={!isVideoAccessible}
                 >
                   {selectedModule.completed ? (
                     <>
