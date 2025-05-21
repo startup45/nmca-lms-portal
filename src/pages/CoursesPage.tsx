@@ -47,10 +47,24 @@ const coursesData = [
   },
 ];
 
+// Extended course type with completed modules property
+interface CourseWithProgress {
+  id: number;
+  title: string;
+  description: string;
+  instructor: string;
+  thumbnail: string;
+  progress: number;
+  duration: string;
+  totalModules: number;
+  enrolledStudents: number;
+  completedModules?: number;
+}
+
 const CoursesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [courses, setCourses] = useState(coursesData);
+  const [courses, setCourses] = useState<CourseWithProgress[]>(coursesData);
   const [isLoading, setIsLoading] = useState(true);
   
   // Load progress for each course if user is a student

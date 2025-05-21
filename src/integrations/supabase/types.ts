@@ -42,6 +42,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_course_progress: {
+        Row: {
+          completed_modules: number[] | null
+          course_id: number
+          created_at: string | null
+          id: string
+          last_accessed_module: number | null
+          progress_percentage: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_modules?: number[] | null
+          course_id: number
+          created_at?: string | null
+          id?: string
+          last_accessed_module?: number | null
+          progress_percentage?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_modules?: number[] | null
+          course_id?: number
+          created_at?: string | null
+          id?: string
+          last_accessed_module?: number | null
+          progress_percentage?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
