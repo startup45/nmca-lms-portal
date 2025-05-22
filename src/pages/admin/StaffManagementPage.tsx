@@ -8,9 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ModalForm } from '@/components/ui/modal-form';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 // Define interfaces for our data
 interface Staff {

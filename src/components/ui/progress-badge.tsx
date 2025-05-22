@@ -20,8 +20,7 @@ export function ProgressBadge({ value, className, textColor }: ProgressBadgeProp
       </div>
       <Progress
         value={value}
-        className="h-2"
-        indicatorClassName={progressColor}
+        className={cn("h-2", progressColor)}
       />
     </div>
   );

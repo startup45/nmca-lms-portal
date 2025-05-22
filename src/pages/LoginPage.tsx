@@ -22,13 +22,13 @@ import { useAuth, LoginCredentials } from '@/contexts/AuthContext';
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Required'),
   password: z.string().min(1, 'Password is required'),
-  role: z.enum(['student', 'staff', 'admin']),
+  role: z.enum(['student', 'staff']),
 });
 
 const LoginPage = () => {
   const { login, isAuthenticated, loading } = useAuth();
   
-  const loginForm = useForm<LoginCredentials & { role: 'student' | 'staff' | 'admin' }>({
+  const loginForm = useForm<LoginCredentials & { role: 'student' | 'staff' }>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       identifier: '',
@@ -42,7 +42,7 @@ const LoginPage = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleLogin = async (data: LoginCredentials & { role: 'student' | 'staff' | 'admin' }) => {
+  const handleLogin = async (data: LoginCredentials & { role: 'student' | 'staff' }) => {
     const { role, ...credentials } = data;
     await login(credentials, role);
     loginForm.reset();
@@ -93,7 +93,7 @@ const LoginPage = () => {
                   <RadioGroup 
                     className="flex flex-col space-y-1"
                     value={loginForm.watch('role')}
-                    onValueChange={(value) => loginForm.setValue('role', value as 'student' | 'staff' | 'admin')}
+                    onValueChange={(value) => loginForm.setValue('role', value as 'student' | 'staff')}
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="student" id="student-login" />
@@ -103,17 +103,12 @@ const LoginPage = () => {
                       <RadioGroupItem value="staff" id="staff-login" />
                       <Label htmlFor="staff-login">Staff</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="admin" id="admin-login" />
-                      <Label htmlFor="admin-login">Administrator</Label>
-                    </div>
                   </RadioGroup>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="identifier">
-                    {loginForm.watch('role') === 'student' ? 'Roll Number or Email' : 
-                     loginForm.watch('role') === 'staff' ? 'Staff ID or Email' : 'Email'}
+                    {loginForm.watch('role') === 'student' ? 'Roll Number or Email' : 'Staff ID or Email'}
                   </Label>
                   <Input
                     id="identifier"
@@ -157,15 +152,27 @@ const LoginPage = () => {
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
                 
-                <p className="text-sm text-center">
-                  Don't have an account?{' '}
-                  <Link 
-                    to="/role-selection" 
-                    className="text-nmca-blue hover:underline"
-                  >
-                    Create Account
-                  </Link>
-                </p>
+                <div className="flex flex-col space-y-4 w-full text-center">
+                  <p className="text-sm">
+                    Don't have an account?{' '}
+                    <Link 
+                      to="/role-selection" 
+                      className="text-nmca-blue hover:underline"
+                    >
+                      Create Account
+                    </Link>
+                  </p>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    Are you an administrator?{' '}
+                    <Link 
+                      to="/admin-login" 
+                      className="text-nmca-blue hover:underline"
+                    >
+                      Admin Login
+                    </Link>
+                  </p>
+                </div>
               </CardFooter>
             </form>
           </Card>
