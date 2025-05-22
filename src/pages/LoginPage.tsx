@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +16,7 @@ import {
 } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth, LoginCredentials } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 // Form validation schema for login
 const loginSchema = z.object({
@@ -26,7 +26,8 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated, loading, user } = useAuth();
+  const navigate = useNavigate();
   
   const loginForm = useForm<LoginCredentials & { role: 'student' | 'staff' }>({
     resolver: zodResolver(loginSchema),
@@ -37,15 +38,16 @@ const LoginPage = () => {
     },
   });
 
-  // If already authenticated, redirect to dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // Effect to redirect after successful auth state change
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleLogin = async (data: LoginCredentials & { role: 'student' | 'staff' }) => {
     const { role, ...credentials } = data;
     await login(credentials, role);
-    loginForm.reset();
   };
 
   return (

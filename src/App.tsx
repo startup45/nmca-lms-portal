@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 // Pages
 import LoginPage from "./pages/LoginPage";
@@ -77,17 +77,17 @@ const RoleRoute = ({ children, allowedRoles }: { children: ReactNode, allowedRol
 };
 
 const AppRoutes = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/admin-login" element={!user ? <AdminLoginPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/role-selection" element={!user ? <RoleSelectionPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/signup-student" element={!user ? <StudentSignupPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/signup-staff" element={!user ? <StaffSignupPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/signup-admin-7x9p3q8r2t" element={!user ? <AdminSignupPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/admin-login" element={!isAuthenticated ? <AdminLoginPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/role-selection" element={!isAuthenticated ? <RoleSelectionPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-student" element={!isAuthenticated ? <StudentSignupPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-staff" element={!isAuthenticated ? <StaffSignupPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/signup-admin-7x9p3q8r2t" element={!isAuthenticated ? <AdminSignupPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       
       {/* Protected Routes */}

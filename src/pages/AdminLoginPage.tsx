@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,6 +38,7 @@ const adminSignupSchema = z.object({
 const AdminLoginPage = () => {
   const { login, signup, isAuthenticated, user, loading } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const navigate = useNavigate();
   
   const loginForm = useForm<LoginCredentials>({
     resolver: zodResolver(adminLoginSchema),
@@ -59,15 +59,12 @@ const AdminLoginPage = () => {
     },
   });
 
-  // If already authenticated as admin, redirect to admin dashboard
-  if (isAuthenticated && user?.role === 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
-  
-  // If authenticated but not as admin, redirect to regular dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // Effect to redirect after successful auth state change
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleLogin = async (data: LoginCredentials) => {
     await login(data, 'admin');

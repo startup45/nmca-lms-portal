@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 
 type User = {
   id: string;
@@ -153,6 +154,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const errorMessage = err.message || 'An unknown error occurred';
       setError(errorMessage);
       toast.error(errorMessage);
+    } finally {
       setLoading(false);
     }
   };
