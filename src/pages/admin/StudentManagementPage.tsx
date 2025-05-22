@@ -113,7 +113,7 @@ const StudentManagementPage: React.FC = () => {
     
     fetchData();
   }, []);
-  
+
   // Handle form changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

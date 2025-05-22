@@ -9,18 +9,26 @@ interface ProgressBadgeProps {
 }
 
 export function ProgressBadge({ value, className, textColor }: ProgressBadgeProps) {
-  const progressColor = value < 30 ? "bg-red-500" : value < 70 ? "bg-amber-500" : "bg-green-500";
+  // Make sure value is within 0-100 range
+  const safeValue = Math.max(0, Math.min(100, value));
+  
+  // Determine progress color based on the value
+  const progressColor = 
+    safeValue < 30 ? "bg-red-500" : 
+    safeValue < 70 ? "bg-amber-500" : 
+    "bg-green-500";
   
   return (
     <div className={cn("flex flex-col space-y-1.5", className)}>
       <div className="flex items-center justify-between">
         <p className={cn("text-sm font-medium", textColor)}>
-          {Math.round(value)}%
+          {Math.round(safeValue)}%
         </p>
       </div>
       <Progress
-        value={value}
-        className={cn("h-2", progressColor)}
+        value={safeValue}
+        className="h-2"
+        indicatorClassName={progressColor}
       />
     </div>
   );

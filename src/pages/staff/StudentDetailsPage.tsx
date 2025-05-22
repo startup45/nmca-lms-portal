@@ -4,11 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { ProgressBadge } from '@/components/ui/progress-badge';
-import { Button } from '@/components/ui/button';
+import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 // Define interfaces for our data
 interface Course {
@@ -97,12 +94,6 @@ const StudentDetailsPage: React.FC = () => {
     fetchData();
   }, []);
   
-  // Calculate most recent activity timestamp
-  const getActivityTimestamp = () => {
-    const now = new Date();
-    return now.toLocaleString();
-  };
-  
   // Table columns
   const columns = [
     { key: 'name', header: 'Name' },
@@ -118,6 +109,9 @@ const StudentDetailsPage: React.FC = () => {
               {enrollment.courseTitle}
             </div>
           ))}
+          {student.enrollments.length === 0 && (
+            <span className="text-sm text-muted-foreground">No courses</span>
+          )}
         </div>
       )
     },
@@ -132,6 +126,9 @@ const StudentDetailsPage: React.FC = () => {
               <ProgressBadge value={enrollment.progress} />
             </div>
           ))}
+          {student.enrollments.length === 0 && (
+            <span className="text-sm text-muted-foreground">No progress data</span>
+          )}
         </div>
       )
     }
@@ -139,78 +136,41 @@ const StudentDetailsPage: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Student Management</h1>
-          <p className="text-muted-foreground">
-            View and manage student details and course progress.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Student Details</h1>
+        <p className="text-muted-foreground">
+          View student information and academic progress.
+        </p>
       </div>
       
       <Card>
-        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <CardTitle>Student Details</CardTitle>
-            <CardDescription>
-              Total Students: {isLoading ? '...' : students.length}
-            </CardDescription>
-          </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            Last updated: {getActivityTimestamp()}
-          </div>
+        <CardHeader>
+          <CardTitle>Students List</CardTitle>
+          <CardDescription>
+            Total Students: {isLoading ? '...' : students.length}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="w-full sm:w-auto mb-4 grid sm:inline-flex grid-cols-3">
-              <TabsTrigger value="all">All Students</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="inactive">Inactive</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="space-y-4">
-              {isLoading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  <span className="ml-2">Loading student data...</span>
-                </div>
-              ) : (
-                <DataTable 
-                  data={students}
-                  columns={columns}
-                  searchKeys={['name', 'rollNumber', 'email']}
-                  itemsPerPage={10}
-                  emptyMessage="No students found."
-                  exportOptions={{
-                    filename: "student-details",
-                    enableCSV: true,
-                    enablePDF: true,
-                    enableWord: true
-                  }}
-                />
-              )}
-            </TabsContent>
-            
-            <TabsContent value="active">
-              <div className="py-12 flex flex-col items-center justify-center text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Active Students View</h3>
-                <p className="text-muted-foreground mt-2 mb-6 max-w-md">
-                  This view would show only active students.
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="inactive">
-              <div className="py-12 flex flex-col items-center justify-center text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Inactive Students View</h3>
-                <p className="text-muted-foreground mt-2 mb-6 max-w-md">
-                  This view would show only inactive students.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-2">Loading student data...</span>
+            </div>
+          ) : (
+            <DataTable 
+              data={students}
+              columns={columns}
+              searchKeys={['name', 'rollNumber', 'email']}
+              itemsPerPage={10}
+              emptyMessage="No students found."
+              exportOptions={{
+                filename: "students-list",
+                enableCSV: true,
+                enablePDF: true,
+                enableWord: true
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
