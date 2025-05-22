@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import StudentManagementPage from "./pages/admin/StudentManagementPage";
 import StaffManagementPage from "./pages/admin/StaffManagementPage";
 import ActivityLogsPage from "./pages/admin/ActivityLogsPage";
+import SettingsPage from "./pages/admin/SettingsPage";
 
 // Layouts
 import AppLayout from "./layouts/AppLayout";
@@ -122,6 +124,11 @@ const AppRoutes = () => {
         <Route path="/admin/activity-logs" element={
           <RoleRoute allowedRoles={['admin']}>
             <ActivityLogsPage />
+          </RoleRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <RoleRoute allowedRoles={['admin']}>
+            <SettingsPage />
           </RoleRoute>
         } />
       </Route>

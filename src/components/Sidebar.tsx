@@ -48,15 +48,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const staffLinks = [
     { to: "/dashboard", icon: Home, label: "Dashboard" },
     { to: "/courses", icon: BookOpen, label: "My Courses" },
-    { to: "/students", icon: Users, label: "Students" },
+    { to: "/staff/students", icon: Users, label: "Students" },
     { to: "/profile", icon: User, label: "Profile" },
   ];
   
   const adminLinks = [
     { to: "/dashboard", icon: Home, label: "Dashboard" },
     { to: "/courses", icon: BookOpen, label: "Courses" },
-    { to: "/users", icon: Users, label: "Users" },
-    { to: "/settings", icon: Settings, label: "Settings" },
+    { to: "/admin/users", icon: Users, label: "Users" },
+    { to: "/admin/staff", icon: Users, label: "Staff" },
+    { to: "/admin/settings", icon: Settings, label: "Settings" },
   ];
   
   let links = studentLinks; // Default to student links

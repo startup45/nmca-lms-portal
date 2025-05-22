@@ -5,9 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { ProgressBadge } from '@/components/ui/progress-badge';
-import { Loader2, Plus, Search, FileEdit, BarChart } from 'lucide-react';
+import { Loader2, Plus, FileEdit, BarChart, Trash2, BookEdit, FileText, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { CourseContentUploadModal, CourseContentData } from '@/components/staff/CourseContentUploadModal';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 
 // Define interfaces for our data
@@ -71,12 +75,35 @@ const generateMockStudents = (count: number) => {
   return students;
 };
 
+// Course form interface
+interface CourseFormData {
+  title: string;
+  description: string;
+  instructor: string;
+  totalModules: number;
+}
+
 const StudentDetailsPage: React.FC = () => {
   const { user } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  
+  // Course management states
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+  const [courseFormData, setCourseFormData] = useState<CourseFormData>({
+    title: '',
+    description: '',
+    instructor: '',
+    totalModules: 1
+  });
+  
+  // Delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
   
   // Load students data
   useEffect(() => {
@@ -106,6 +133,81 @@ const StudentDetailsPage: React.FC = () => {
     setIsUploadModalOpen(false);
   };
   
+  // Course form handlers
+  const handleCourseChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCourseFormData({
+      ...courseFormData,
+      [name]: name === 'totalModules' ? parseInt(value) || 1 : value
+    });
+  };
+  
+  const handleCourseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isEditMode && courseToEdit) {
+      // Update existing course
+      toast.success(`Course "${courseFormData.title}" updated successfully`);
+    } else {
+      // Create new course
+      toast.success(`Course "${courseFormData.title}" created successfully`);
+    }
+    
+    resetCourseForm();
+    setIsCourseModalOpen(false);
+  };
+  
+  const openCourseModal = (course?: Course) => {
+    if (course) {
+      // Edit mode
+      setIsEditMode(true);
+      setCourseToEdit(course);
+      setCourseFormData({
+        title: course.title,
+        description: 'Course description here',
+        instructor: 'Dr. Jane Smith',
+        totalModules: 10
+      });
+    } else {
+      // Create mode
+      setIsEditMode(false);
+      setCourseToEdit(null);
+      setCourseFormData({
+        title: '',
+        description: '',
+        instructor: user?.name || '',
+        totalModules: 1
+      });
+    }
+    setIsCourseModalOpen(true);
+  };
+  
+  const resetCourseForm = () => {
+    setCourseFormData({
+      title: '',
+      description: '',
+      instructor: '',
+      totalModules: 1
+    });
+    setIsEditMode(false);
+    setCourseToEdit(null);
+  };
+  
+  // Delete handlers
+  const openDeleteDialog = (course: Course) => {
+    setCourseToDelete(course);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteCourse = () => {
+    if (courseToDelete) {
+      // In a real app, we would delete from Supabase
+      toast.success(`Course "${courseToDelete.title}" deleted successfully`);
+      setIsDeleteDialogOpen(false);
+      setCourseToDelete(null);
+    }
+  };
+  
   // Table columns
   const columns = [
     { key: 'name', header: 'Name' },
@@ -126,9 +228,9 @@ const StudentDetailsPage: React.FC = () => {
                   setSelectedCourseId(enrollment.courseId);
                   setIsUploadModalOpen(true);
                 }}
-                className="ml-2"
+                className="ml-2 h-8"
               >
-                <Plus size={14} className="mr-1" />
+                <FileText size={14} className="mr-1" />
                 Add Content
               </Button>
             </div>
@@ -187,52 +289,89 @@ const StudentDetailsPage: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Student Details</h1>
-        <p className="text-muted-foreground">
-          View student information and academic progress.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Student Details</h1>
+          <p className="text-muted-foreground">
+            View student information and academic progress.
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button onClick={() => openCourseModal()}>
+            <Plus size={16} className="mr-1" />
+            Create Course
+          </Button>
+        </div>
       </div>
 
-      {/* Course Performance Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {coursePerformance.map(course => (
-          <Card key={course.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{course.title}</CardTitle>
-              <CardDescription>{course.studentCount} students enrolled</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Average Progress</span>
-                  <span className="text-sm font-bold">{course.averageProgress}%</span>
-                </div>
-                <Progress
-                  value={course.averageProgress}
-                  className="h-2"
-                  indicatorClassName={course.averageProgress < 30 ? "bg-red-500" : 
-                    course.averageProgress < 70 ? "bg-amber-500" : "bg-green-500"}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => {
-                  setSelectedCourseId(course.id);
-                  setIsUploadModalOpen(true);
-                }}
-              >
-                <Plus size={16} className="mr-1" />
-                Add Learning Material
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      {/* Course Management Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>Course Management</CardTitle>
+          <CardDescription>Manage and monitor your courses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {coursePerformance.map(course => (
+              <Card key={course.id} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{course.title}</CardTitle>
+                  <CardDescription>{course.studentCount} students enrolled</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Average Progress</span>
+                      <span className="text-sm font-bold">{course.averageProgress}%</span>
+                    </div>
+                    <Progress
+                      value={course.averageProgress}
+                      className="h-2"
+                      indicatorClassName={course.averageProgress < 30 ? "bg-red-500" : 
+                        course.averageProgress < 70 ? "bg-amber-500" : "bg-green-500"}
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex gap-2 pt-0">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedCourseId(course.id);
+                      setIsUploadModalOpen(true);
+                    }}
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Content
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => openCourseModal(course)}
+                  >
+                    <BookEdit size={14} className="mr-1" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => openDeleteDialog(course)}
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       
+      {/* Students List */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -276,6 +415,110 @@ const StudentDetailsPage: React.FC = () => {
         onClose={() => setIsUploadModalOpen(false)}
         onSubmit={handleUploadContent}
       />
+
+      {/* Create/Edit Course Modal */}
+      <Dialog open={isCourseModalOpen} onOpenChange={setIsCourseModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? 'Edit Course' : 'Create New Course'}</DialogTitle>
+            <DialogDescription>
+              {isEditMode 
+                ? 'Update the course details' 
+                : 'Add a new course to your teaching portfolio'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleCourseSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Course Title</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={courseFormData.title}
+                  onChange={handleCourseChange}
+                  placeholder="e.g. Advanced Financial Accounting"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Course Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={courseFormData.description}
+                  onChange={handleCourseChange}
+                  placeholder="Describe the course content and objectives"
+                  className="min-h-[100px]"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="instructor">Instructor</Label>
+                <Input
+                  id="instructor"
+                  name="instructor"
+                  value={courseFormData.instructor}
+                  onChange={handleCourseChange}
+                  placeholder="e.g. Dr. Jane Smith"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="totalModules">Number of Modules</Label>
+                <Input
+                  id="totalModules"
+                  name="totalModules"
+                  type="number"
+                  min="1"
+                  value={courseFormData.totalModules}
+                  onChange={handleCourseChange}
+                  required
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCourseModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {isEditMode ? 'Save Changes' : 'Create Course'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Course</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{courseToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-3">
+            <p className="text-sm text-red-600">
+              This will remove all course content and student enrollments for this course.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteCourse}>
+              Delete Course
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
