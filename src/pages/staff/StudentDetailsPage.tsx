@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { ProgressBadge } from '@/components/ui/progress-badge';
-import { Loader2, Plus, FileEdit, BarChart, Trash2, BookEdit, FileText, BookOpen } from 'lucide-react';
+import { Loader2, Plus, FileEdit, BarChart, Trash2, FileText, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { CourseContentUploadModal, CourseContentData } from '@/components/staff/CourseContentUploadModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -352,7 +351,7 @@ const StudentDetailsPage: React.FC = () => {
                     className="flex-1"
                     onClick={() => openCourseModal(course)}
                   >
-                    <BookEdit size={14} className="mr-1" />
+                    <BookOpen size={14} className="mr-1" />
                     Edit
                   </Button>
                   <Button 
