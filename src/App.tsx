@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import StudentDetailsPage from "./pages/staff/StudentDetailsPage";
 
 // Admin Pages
+import UserManagementPage from "./pages/admin/UserManagementPage";
 import StudentManagementPage from "./pages/admin/StudentManagementPage";
 import StaffManagementPage from "./pages/admin/StaffManagementPage";
 import ActivityLogsPage from "./pages/admin/ActivityLogsPage";
@@ -104,6 +104,11 @@ const AppRoutes = () => {
         } />
         
         {/* Admin Routes */}
+        <Route path="/admin/users" element={
+          <RoleRoute allowedRoles={['admin']}>
+            <UserManagementPage />
+          </RoleRoute>
+        } />
         <Route path="/admin/students" element={
           <RoleRoute allowedRoles={['admin']}>
             <StudentManagementPage />
