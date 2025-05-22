@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,8 +32,8 @@ const UserManagementPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'student',
-    status: 'active'
+    role: 'student' as 'admin' | 'staff' | 'student',
+    status: 'active' as 'active' | 'pending' | 'disabled'
   });
   
   // Load users data
@@ -58,9 +57,6 @@ const UserManagementPage = () => {
   }, []);
   
   const generateMockUsers = (count: number): User[] => {
-    const roles: ('admin' | 'staff' | 'student')[] = ['admin', 'staff', 'student'];
-    const statuses: ('active' | 'pending' | 'disabled')[] = ['active', 'pending', 'disabled'];
-    
     const users: User[] = [];
     
     // Generate mostly students
@@ -83,14 +79,14 @@ const UserManagementPage = () => {
       lastActive.setDate(lastActive.getDate() - Math.floor(Math.random() * 30));
       
       // Status is mostly active
-      const status = Math.random() > 0.2 ? 'active' : (Math.random() > 0.5 ? 'pending' : 'disabled');
+      const status = Math.random() > 0.2 ? 'active' as const : (Math.random() > 0.5 ? 'pending' as const : 'disabled' as const);
       
       users.push({
         id: `user-${i}`,
         name: `${role === 'admin' ? 'Admin' : role === 'staff' ? 'Staff' : 'Student'} ${i}`,
         email: `${role}${i}@example.com`,
         role,
-        status: status as ('active' | 'pending' | 'disabled'),
+        status,
         dateJoined: dateJoined.toISOString().split('T')[0],
         lastActive: lastActive.toISOString().split('T')[0],
       });
@@ -115,8 +111,8 @@ const UserManagementPage = () => {
     setFormData({
       name: '',
       email: '',
-      role: 'student',
-      status: 'active'
+      role: 'student' as 'admin' | 'staff' | 'student',
+      status: 'active' as 'active' | 'pending' | 'disabled'
     });
     setIsUserModalOpen(true);
   };
@@ -136,7 +132,7 @@ const UserManagementPage = () => {
       // Edit existing user
       setUsers(users.map(user => 
         user.id === selectedUser.id 
-          ? { ...user, ...formData } 
+          ? { ...user, ...formData } as User
           : user
       ));
       toast.success('User updated successfully');
@@ -146,8 +142,8 @@ const UserManagementPage = () => {
         id: `user-${Date.now()}`,
         name: formData.name,
         email: formData.email,
-        role: formData.role as 'admin' | 'staff' | 'student',
-        status: formData.status as 'active' | 'pending' | 'disabled',
+        role: formData.role,
+        status: formData.status,
         dateJoined: new Date().toISOString().split('T')[0],
         lastActive: new Date().toISOString().split('T')[0],
       };
